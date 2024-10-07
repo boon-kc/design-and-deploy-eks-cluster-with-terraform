@@ -1,0 +1,5 @@
+/.terraform.lock.hcl
+/key-pair-to-use.pem
+/terraform.tfstate
+/terraform.tfstate.backup
+.terraform/
