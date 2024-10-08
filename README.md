@@ -19,28 +19,33 @@ A VPC is created with two private and two public subnets (one pair in each AZ wh
 
 The EKS control plane is also automatically created when the cluster is set up within the defined VPC's cidr block.
 
-Private subnets are used for better security so that the traffic is routed through the public subnets before hitting the Internet.
+Private subnets are used for better security so that the traffic is routed through the NAT gateway in the public subnets before hitting the internet.
+
 The /16 subnet mask is chosen as it comprises of sufficient IP addresses (65,536) to allocate to all the subnets as well as worker nodes.
 
-The *enable_dns_support* and *enable_dns_hostnames* are enabled to allow each instance created to have a DNS name and IP address assigned automatically.
+NAT gateways are also added and ensured that there is one created per AZ. This allows the worker nodes in each AZ to be able to route traffic to the internet through the NAT gateway in their own AZ.
 
 ### Subnets
 
-Subnets is used to influence how traffic is routed within VPC and to the Internet. Both public and private subnets is used in this deployment to allows better security and cost-efficacy. Having the subnets across 2 different AZ allows for maintaining high availability.
+Subnets is used to influence how traffic is routed within VPC and to the internet. Both public and private subnets is used in this deployment to allows better security and cost-efficacy. Having the subnets across 2 different AZ allows for maintaining high availability.
 
 In each private subnet, the worker nodes are deployed. These nodes are connected to the public subnets and able to communicate with various services within the VPC. The separation of private and public subnets brings various benefits:
 
 - Placing worker nodes in private subnets shield them from direct access to the internet and reducing attack surface.
-- Worker nodes usually requires limited internet access for certain tasks such as pulling container images or communicating with external services. These tasks can be routed through the public subnets if they are required or via a NAT Gateway in public subnet in each AZ. This save costs and provide better control over outgoing traffic.
+- Worker nodes usually requires limited internet access for certain tasks such as pulling container images or communicating with external services. These tasks can be routed through a NAT Gateway in the public subnet in each AZ to the internet. This save costs and provide better control over outgoing traffic.
 - By having both public and private subnets in each AZ, application and its components that are residing in each private and public subnets can continue to function even if one AZ experiences an outage.
 
 ### Route Tables
 
-Route tables are added to define the allow routes for private and public subnets within and outside the EKS cluster.
+Route tables are added to define the allowed routes for private and public subnets within and outside the EKS cluster.
 
-Two route tables are created, one for private subnet and one for public subnet. For the public subnet table, a route is created to allows the public subnets to access the Internet. This table is associated with both public subnets across two AZs. For the private subnets route table, the route created is to allow only for local VPC communication and not with the internet. This table is also associated with both private subnets across two AZs.
+Two route tables are created, one for private subnet and one for public subnet.
 
-The design considerations allows only public subnets access to the internet via the Internet Gateway while private subnets can only communicate with the nodes and other services within the VPC.
+For the public subnet table, a route is created to allows the public subnets to access the internet. This table is associated with both public subnets across two AZs.
+
+For the private subnets route table, the route created is to allow private subnets to access internet only via the NAT gatway. This table is also associated with both private subnets across two AZs.
+
+The design considerations allows public subnets access to the internet via the Internet Gateway while preventing private subnets from directly accessing the internet.
 
 ### Security Groups
 
@@ -70,7 +75,7 @@ The following policies are attached to the IAM role for worker nodes:
 
 - **AmazonEKSWorkerNodePolicy.** This policy is a predefined IAM policy by AWS to provide permissions required for Amazon EKS worker nodes such as joining the cluster or retriving information about the cluster. This is added to allow worker nodes to connect to the EKS control plane smoothly.
 
-- **AmazonEKSCNIPolicy.** This policy is a predefined IAM policy by AWS to provide permissions required to manage networking related actions, such as assigning IP addresses from the VPC cidr block, allowing the worker nodes to assign IP addresses for instances based on the available addresses from the VPC cidr block.
+- **AmazonEKS_CNI_Policy.** This policy is a predefined IAM policy by AWS to provide permissions required to manage networking related actions, such as assigning IP addresses from the VPC cidr block, allowing the worker nodes to assign IP addresses for instances based on the available addresses from the VPC cidr block.
 
 A custom IAM policy is also created for EBS storage. In the policy, various permissions such as creating volume, creating snapshots and modifying volues are added. These permissions allow the worker nodes to utilise EBS storage and store persistent data. This policy is also attached to the IAM role for worker nodes.
 
@@ -103,7 +108,7 @@ Route tables and private subnets are not outputted as they often contain sensiti
 3. Latency is negligible for communication across AZs, or worker nodes can be deployed in the same AZs if the communication require lower latency.  
 4. EBS volumes attached to the EKS cluster is encrypted at rest, ensuring that the worker nodes' storage is protected.
 5. EBS volumes are available for both the worker nodes across different AZs, the availability can be either direct access to the EBS storage or its snapshots.
-6. A NAT Gateway is to be set up in the public subnet if the private subnet needs to access the internet.
+6. There is an Internet connection for deployment and pulling of the necessary resources to deploy the cluster.
 
 ## Deployment
 
@@ -124,19 +129,24 @@ Route tables and private subnets are not outputted as they often contain sensiti
 2. Create a directory to store all the terraform files. (deploy-eks-cluster)
 
 3. Create various files that contain the configurations required to set up the cluster as well as the required VPC.
+
     - *main.tf* : Contain all information required to set up the terraform code, provider settings etc.
-    - *variables.tf* : Contain input variables to be used by other modules
-    - *eks-cluster.tf* : Contain the information about the EKS cluster, including number of private subnets, number of worker nodes.
 
-    - *VPC.tf* : Contain the information on the cidr blocks, availability zones, private and public subnets.
+    - *variables.tf* : Contain the common variables that are used in various other configuration files. This allows the value of the variables to be centrally managed.
 
-    - *routes.tf* : Contain the information on the route tables for public and private subnets.
+    - *eks-cluster.tf* : Contain the information about the EKS cluster, including number of private subnets, number of worker nodes. Additional security groups that are created in `security_groups.tf` is also linked to the cluster via *cluster_additional_security_group_ids*.
+
+    - *VPC.tf* : Contain the information on the cidr blocks, availability zones, private and public subnets. The *enable_dns_support* and *enable_dns_hostnames* are enabled to allow each instance created to have a DNS name and IP address assigned automatically.
+
+    - *routes.tf* : Contain the information on the route tables for public and private subnets. The code shown is commented as these are included in the terraform module for aws vpc (terraform-aws-modules/vpc/aws)
 
     - *roles.tf* : Contain the information on all the incoming and outgoing traffic rules for the control plane and worker nodes.
 
     - *nacl-config.tf* : Contain the information on all inbound and outbound traffic rules at the subnet level.
 
     - *roles.tf* : Contain the information for all he IAM roles and policies used for the worker nodes in order to ensure that they are permissioned to access certain resources.
+
+    - *nat_gateway.tf* : Contain the information for creating a nat gateway for each AZ. The code is commented as these are included in the terraform module for aws vpc (terraform-aws-modules/vpc/aws)
 
     - *ebs.tf* : Contain information on the EBS volume to be used by the EKS cluster
 
@@ -150,12 +160,18 @@ Route tables and private subnets are not outputted as they often contain sensiti
 
 5. Run `terraform init` to initialize terraform with all the providers.
 
-6. Run `terraform validate` to validate the configuration
+6. Run `terraform validate` to validate the configuration.
 
-7. Run `terraform plan` to play the deployment  
+7. Run `terraform plan` to plan the deployment, allowing you to see what terraform will be deploying before it is applied.  
 
 8. Run `terraform apply` to apply and create all the necessary VPC, subnets, security groups, eks cluster and worker nodes. Once the process is completed, Terraform will output the cluster information.
 
 9. Congratulations! You have deployed an AWS EKS cluster successfully!
 
 10. (Optional) Run `kubectl get nodes` to check that your worker nodes are deployed correctly and you are able to see them in different availability zones (`ap-southeast-1a` and `ap-southeast-1b`)
+
+11. (Optional) Verification of your cluster: Using the instance's public IP outputted from Terraform. You can ssh into the worker node's instance with the keypair and public IP.
+
+- You can check if you have internet access by just `ping google.com`.
+
+- You can check if you can access the other worker nodes by checking its private IP address of the other nodes and `ping <private-ip-of-other-instance>`

@@ -15,29 +15,29 @@ resource "aws_network_acl_rule" "allow_internal_inbound" {
   cidr_block = module.vpc.vpc_cidr_block # VPC CIDR for internal traffic
   rule_action = "allow"
   from_port = 0
-  to_port = 0
+  to_port = 65535
 }
 
 # Allow outbound traffic to VPC (EBS, control plane, etc)
-resource "aws_network_acl_rule" "allow_internal_outbound" {
-  network_acl_id = aws_network_acl.private_nacl.id
-  rule_number = 100
-  egress = true
-  protocol = "-1" # All protocols
-  cidr_block = module.vpc.vpc_cidr_block # VPC CIDR for internal traffic
-  rule_action = "allow"
-  from_port = 0
-  to_port = 0
-}
+# resource "aws_network_acl_rule" "allow_internal_outbound" {
+#   network_acl_id = aws_network_acl.private_nacl.id
+#   rule_number = 100
+#   egress = true
+#   protocol = "-1" # All protocols
+#   cidr_block = module.vpc.vpc_cidr_block # VPC CIDR for internal traffic
+#   rule_action = "allow"
+#   from_port = 0
+#   to_port = 0
+# }
 
-# Deny all inbound traffic from the internet 
-resource "aws_network_acl_rule" "deny_internet_inbound" {
+# Allow all inbound traffic from the NAT
+resource "aws_network_acl_rule" "allow_internet_inbound" {
   network_acl_id = aws_network_acl.private_nacl.id
   rule_number = 200 # higher priority for deny rule
   egress = false
   protocol = "-1" # All protocols
   cidr_block = "0.0.0.0/0" # Internet
-  rule_action = "deny"
+  rule_action = "allow"
   from_port = 0
   to_port = 0
 }
