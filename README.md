@@ -162,16 +162,14 @@ Route tables and private subnets are not outputted as they often contain sensiti
 
 6. Run `terraform validate` to validate the configuration.
 
-7. Run `terraform plan` to plan the deployment, allowing you to see what terraform will be deploying before it is applied.  
+7. Run `terraform plan` to plan the deployment, allowing you to see what terraform will be deploying before it is applied.
 
-8. Run `terraform apply` to apply and create all the necessary VPC, subnets, security groups, eks cluster and worker nodes. Once the process is completed, Terraform will output the cluster information.
+8. Run `terraform apply -target aws_security_group.eks_control_plane_sg` and `terraform apply -target aws_security_group.eks_worker_sg` first to create the necessary security groups to be added prior to creating the cluster.
 
-9. Congratulations! You have deployed an AWS EKS cluster successfully!
+9. Run `terraform apply` to apply and create all the necessary VPC, subnets, security groups, eks cluster and worker nodes. Once the process is completed, Terraform will output the cluster information.
 
-10. (Optional) Run `kubectl get nodes` to check that your worker nodes are deployed correctly and you are able to see them in different availability zones (`ap-southeast-1a` and `ap-southeast-1b`)
+10. Congratulations! You have deployed an AWS EKS cluster successfully!
 
-11. (Optional) Verification of your cluster: Using the instance's public IP outputted from Terraform. You can ssh into the worker node's instance with the keypair and public IP.
+(Optional) Run `kubectl get nodes` to check that your worker nodes are deployed correctly and you are able to see them in different availability zones (`ap-southeast-1a` and `ap-southeast-1b`)
 
-- You can check if you have internet access by just `ping google.com`.
-
-- You can check if you can access the other worker nodes by checking its private IP address of the other nodes and `ping <private-ip-of-other-instance>`
+(Optional) Verification of your cluster: Ssh into the worker nodes and check that you can `ping google.com` to verify internet access, as well as `ping <private-ip-of-other-instance>` to verify that you can communicate with other nodes.

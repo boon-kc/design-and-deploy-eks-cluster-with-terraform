@@ -16,26 +16,18 @@ module "eks" {
 
   eks_managed_node_group_defaults = {
     disk_size = 50
+    vpc_security_group_ids = [aws_security_group.eks_worker_sg.id]
   }
 
   # Worker nodes configuration
   eks_managed_node_groups = {
-    eks_managed_worker = {
-      name = "managed-node-group-1"
+    eks_managed_workers = {
+      name = "managed-node-group"
       min_size = 2
       max_size = 2
       desired_size = 2
       instance_type = "t3.small"
-      subnet_ids = [module.vpc.private_subnets[0]]
-      capacity_type = "ON_DEMAND"
-    },
-      eks_managed_worker_2 = {
-      name = "managed-node-group-2"
-      min_size = 1
-      max_size = 1
-      desired_size = 1
-      instance_type = "t3.small"
-      subnet_ids = [module.vpc.private_subnets[1]]
+      subnet_ids = module.vpc.private_subnets
       capacity_type = "ON_DEMAND"
     }
   }

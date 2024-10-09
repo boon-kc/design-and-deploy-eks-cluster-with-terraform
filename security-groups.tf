@@ -7,7 +7,7 @@ resource "aws_security_group" "eks_control_plane_sg" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr] # Allow only within the VPC range
+    cidr_blocks = ["10.0.0.0/16"] # Allow only within the VPC range
   }
 
   egress {
@@ -31,7 +31,7 @@ resource "aws_security_group" "eks_worker_sg" {
     from_port = 443
     to_port = 443
     protocol = "tcp"
-    cidr_blocks = [var.vpc_cidr] # Allow traffic within VPC
+    cidr_blocks = ["10.0.0.0/16"] # Allow traffic within VPC
   }
 
   # Allow traffic for worker nodes to communicate with each other
@@ -39,7 +39,7 @@ resource "aws_security_group" "eks_worker_sg" {
     from_port   = 1025
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr] # Allow traffic within VPC
+    cidr_blocks = ["10.0.0.0/16"] # Allow traffic within VPC
   }
 
   # Allow traffic for the kubelet API
