@@ -172,4 +172,4 @@ Route tables and private subnets are not outputted as they often contain sensiti
 
 (Optional) Run `kubectl get nodes` to check that your worker nodes are deployed correctly and you are able to see them in different availability zones (`ap-southeast-1a` and `ap-southeast-1b`)
 
-(Optional) Verification of your cluster: Ssh into the worker nodes and check that you can `ping google.com` to verify internet access, as well as `ping <private-ip-of-other-instance>` to verify that you can communicate with other nodes.
+(Optional) Verification of your cluster: Access the worker nodes' instances using the AWS Management Console and check that you can `ping google.com` to verify internet access, as well as `ping <private-ip-of-other-instance>` to verify that you can communicate with other nodes.
